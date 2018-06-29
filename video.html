@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Video</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body
+            {
+                font-family: arial;
+            }
+            #color
+            {
+                position: fixed;
+                font-size: 45px;
+                bottom: 25px;
+                left: 0;
+                background-color: black;
+                color: white;
+                padding: 25px;
+                width: 300px;
+            }
+            canvas
+            {
+                display: none;
+            }
+            #video
+            {
+                width: 100%;
+                height: 500px;
+            }
+            #file
+            {
+                display: none;
+            }
+            .but {
+    background-color: #4CAF50; /* Green */
+    border: none;
+    color: white;
+    padding: 25px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 25px;
+    margin: 4px 2px;
+    -webkit-transition-duration: 0.4s; /* Safari */
+    transition-duration: 0.4s;
+    cursor: pointer;
+}
+
+.button1 {
+    background-color: white; 
+    color: black; 
+    border: 2px solid #4CAF50;
+}
+
+.button1:hover {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.button2 {
+    background-color: white; 
+    color: black; 
+    border: 2px solid #008CBA;
+}
+
+.button2:hover {
+    background-color: #008CBA;
+    color: white;
+}
+
+.button3 {
+    background-color: white; 
+    color: black; 
+    border: 2px solid #f44336;
+}
+
+.button3:hover {
+    background-color: #f44336;
+    color: white;
+}
+
+.button4 {
+    background-color: white;
+    color: black;
+    border: 2px solid #e7e7e7;
+}
+
+.button4:hover {background-color: #e7e7e7;}
+
+.button5 {
+    background-color: white;
+    color: black;
+    border: 2px solid #555555;
+}
+
+.button5:hover {
+    background-color: #555555;
+    color: white;
+}
+input
+{
+    padding: 25px;
+    font-size: 25px;
+}
+#left
+{
+    display: inline-block;
+    width: 50%;
+}
+#right
+{
+    float: right;
+    width: 50%;
+    display: inline-block;
+}
+#disp
+{
+    font-weight: 600;
+    font-size: 30px;
+}
+        </style>
+    </head>
+    <body>
+        <div id="left">
+       <video id="video" width="640" height="480" autoplay></video>
+       <canvas id="canvas" width="640" height="480"></canvas>
+        <label id="color"></label>
+        </div>
+        
+        <div id="right">
+            <h1>Training Area</h1>
+       <input type="text" id="nam" placeholder="Name of the Colour" autocomplete="off">
+       <button id="as" class="but button2" onclick="document.getElementById('file').click()" >Add Samples</button>
+       <input type="file" name="images[]" accept="image/*" multiple id="file">
+       <button class="but button1" id="snap" >Snap</button>
+       <hr>
+       <h2>Trained Colours</h2>
+       <div id="disp"></div>
+        </div>
+<script>
+    // Grab elements, create settings, etc.
+var video = document.getElementById('video');
+
+// Get access to the camera!
+if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    // Not adding `{ audio: true }` since we only want video now
+    navigator.mediaDevices.getUserMedia({ video: true }).then(function(stream) {
+        video.src = window.URL.createObjectURL(stream);
+        video.play();
+    });
+}
+
+var canvas = document.getElementById('canvas');
+var context = canvas.getContext('2d');
+var video = document.getElementById('video');
+
+// Trigger photo take
+document.getElementById("snap").addEventListener("click", function() {
+	context.drawImage(video, 0, 0, 640, 480);
+        var tn = nam.value;
+        var temp = getMedian(video);
+        if(!nodes[tn])
+        nodes[tn] = [];
+        nodes[tn].push(temp);
+        setTimeout(function(){
+            displayNodes();
+        }, 1000);
+});
+setInterval(function(){
+    context.drawImage(video, 0, 0, 640, 480);
+    var data = getColor(getMedian(video));
+    try
+    {
+        document.getElementById('color').innerHTML = Object.keys(data).reduce((a, b) => data[a] > data[b] ? a : b) + " " + data[Object.keys(data).reduce((a, b) => data[a] > data[b] ? a : b)].toFixed(2) + "%";
+    }
+    catch(err)
+    {
+        document.getElementById('color').innerHTML = '????';
+    }
+}, 1000);    
+</script>
+ <script>
+            var nam = document.getElementById('nam');
+            var nodes = {};
+            document.getElementById('file').onchange = function(event)
+            {
+                var reader = [];
+                var file = event.target.files;
+                for(var i = 0; i<event.target.files.length; i++)
+                {
+                    var tn = nam.value;
+                    reader.push(new FileReader());
+                    reader[i].onload = function()
+                    {
+                        var temp_img = document.createElement('img');
+                        temp_img.src = this.result;
+                        temp_img.onload = function()
+                        {
+                            var temp = getMedian(temp_img);
+                            if(!nodes[tn])
+                            nodes[tn] = [];
+                            nodes[tn].push(temp);
+                        };
+                    };
+                    reader[i].readAsDataURL(file[i]);
+                }
+                nam.value = '';
+                setTimeout(function(){
+                     displayNodes();
+                }, 1000);
+            };
+            function getMedian(img)
+            {
+                var dict = {};
+                var c = document.createElement("Canvas");
+                var ctx = c.getContext("2d");
+                ctx.drawImage(img, 0, 0);
+                var imgData = ctx.getImageData(0, 0, c.width, c.height);
+                dict['red'] = 0, dict['green'] = 0, dict['blue'] = 0;
+                var alpha = 0;
+                for (var i = 0; i < imgData.data.length; i += 4) {
+                    dict['red'] += imgData.data[i];
+                    dict['green'] += imgData.data[i + 1];
+                    dict['blue'] += imgData.data[i + 2];
+                    alpha += imgData.data[i + 3];
+                }
+                dict['red'] /= (imgData.data.length/4);
+                dict['green'] /= (imgData.data.length/4);
+                dict['blue'] /= (imgData.data.length/4);
+                return dict;
+            }
+            function displayNodes()
+            {
+                document.getElementById('disp').innerHTML = '';
+                for(var key in nodes)
+                {
+                    var p = document.createElement('p');
+                    p.innerHTML = key;
+                    p.style.color = 'rgb('+nodes[key][0].red+', '+nodes[key][0].green+', '+nodes[key][0].blue+')';
+                    document.getElementById('disp').appendChild(p);
+                    /*for(var i in nodes[key])
+                    {
+                        var p = document.createElement('p');
+                        p.innerHTML = nodes[key][i].red + " " + nodes[key][i].green + " " + nodes[key][i].blue;
+                        document.getElementById('disp').appendChild(p);
+                    }*/
+                }
+            }
+            function getColor(key_node)
+            {
+                var color = {};
+                for(var key in nodes)
+                {
+                    color[key] = getProbability(key_node, nodes[key]);
+                }
+                return color;
+            }
+            const low_limit = 0;
+            const high_limit = 255;
+            function getProbability(key_node, node)
+            {
+                var red = 0, green = 0, blue = 0;
+                for(var i in node)
+                {
+                    red += node[i].red;
+                    green += node[i].green;
+                    blue += node[i].blue;
+                }
+                red /= node.length;
+                green /= node.length;
+                blue /= node.length;
+                var key_red = Math.abs(red - key_node.red);
+                var key_green = Math.abs(green - key_node.green);
+                var key_blue = Math.abs(blue - key_node.blue);
+                var limit = (key_red + key_green + key_blue) / 3;
+                return (Math.abs(high_limit - limit) / (high_limit - low_limit)) * 100;
+            }
+        </script>
+    </body>
+</html>
